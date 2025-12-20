@@ -2,6 +2,8 @@
 
 This project explores Bayesian forecasting of small, high-variance reagent inventory data based on a QC environment. Weekly usage is modeled using Poisson–Gamma conjugacy, resulting in a Negative Binomial posterior predictive distribution scaled by forecast horizon.
 
+Project URL: https://thefifthpostulate.github.io/InventoryForecastingBayesian/InventoryProject.html
+
 The analysis includes:
 - Feature engineering from raw inventory records
 - Posterior predictive forecasting across rolling windows
