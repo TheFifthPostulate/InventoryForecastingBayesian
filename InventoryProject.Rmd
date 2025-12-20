@@ -1,43 +1,49 @@
 
-# Problem and Intuition
+# Bayesian Forecasting of Small Inventory data
 
-This project started as a personal exploration of the question "can I make forecasts with no predictor variables based on modeling just the underlying stochastic process?". I wanted to forecast demand for a small inventory data that I  kept track of in my QC role. In this inventory data, there were no covariates available other than the date of inventory. In this project, I have used *Poisson-Gamma Mix Model* to attempt to model the stochastic process underlying the inventory data. I have used mock inventory data that mimics the actual data I encountered in my QC role. I have also masked sensitive information such as expiry dates.
+
+####    Jithakrishna Prakash   |   jprakashoff@gmail.com   |   [linkedin.com/in/jithakrishna-prakash/](https://www.linkedin.com/in/jithakrishna-prakash/)
+
+***
+
+This project started as a personal exploration of the question "can I make forecasts with no predictor variables and based on modeling just the underlying stochastic process?". I wanted to forecast demand for a small inventory data that I  kept track of in my QC role. In this inventory data, there were no covariates available other than the date of inventory. In this project, I have used **Poisson-Gamma Mix Model** to attempt to model the stochastic process underlying the inventory data. I have used mock inventory data that mimics the actual data I encountered in my QC role. I have also masked sensitive information such as material names and expiry dates.
 
 The potential benefits of this analysis were:
+
 1. Optimization of restock frequency
-2. Reduction of effort to perform frequent restocks
-3. Optimum stock level that maximizes inventory level as well as minimize expected waste
+1. Reduction of effort to perform frequent restocks
+1. Optimum stock level that maximizes inventory level as well as minimize expected waste
 
 
 # Stochastic Process
 
 Bayesian analysis involves representing a stochastic process (random process) using known probability distributions called likelihood functions. Typically, these likelihood functions will need parameter values to work. We usually start with a range of values/a probability distribution for these parameter(s), called priors. Then we will obtain a new distribution called the posterior probability distribution by combining the likelihood and the prior using the Bayes Theorem. The posterior probability distribution will then be representative of the possible values of the random variable ranked by plausibility.
 
-In this case, the nature of my inventory data is *Count Data*. Count data is fundamentally modeled using the *Poisson Distribution* as the likelihood function:
+In this case, the nature of my inventory data is **Count Data**. Count data is fundamentally modeled using the **Poisson Distribution** as the likelihood function:
 
 PMF: P(x; lambda) ~ lambda^x * exp(-lambda) / factorial(x)
 
 where x is the count for one time period, lambda is the rate for one time period. In this problem, lambda is the daily usage which is assumed to be constant for a given week and the counts produced are weekly. 
 
-However, the underlying usage changes every week. So, lambda is assumed to follow the *Gamma Distribution*:
+However, the underlying usage changes every week. So, lambda is assumed to follow the **Gamma Distribution**:
 
 PDF: p(x; a, b) ~ b^a * x^(a-1) * exp(-lambda * x) / gamma(a)
 
 where a is the size parameter and b is the rate parameter.
 
-Here, the Gamma Distribution is the *prior* we assume for the lambda parameter of the Poisson likelihood.
+Here, the Gamma Distribution is the **prior** we assume for the lambda parameter of the Poisson likelihood.
 
-Applying Bayes Theorem over Poisson Likelihood and Gamma Prior will result in a _closed-form expression_ for the *Posterior Probability Distribution*, which is the *Negative Binomial Distribution* PMF: NegBinom(x; a, b/(1 + b)). 
+Applying Bayes Theorem over Poisson Likelihood and Gamma Prior will result in a **closed-form expression** for the **Posterior Probability Distribution**, which is the **Negative Binomial Distribution** PMF: NegBinom(x; a, b/(1 + b)). 
 
-This is the posterior probability distribution for one occurrence in the time scale of lambda, which is *one day*. We assume that for k days, parameters a and b of the gamma prior do not change. Following this, to forecast consumption over a horizon of k days, we exploit a key property of Poisson processes: _counts scale linearly with exposure time_. If daily usage follows a Poisson process with rate lambda, then the total count over k days follows a Poisson distribution with mean lambda * k. However, the variability of lambda is already captured by the gamma prior. 
+This is the posterior probability distribution for one occurrence in the time scale of lambda, which is **one day**. We assume that for k days, parameters a and b of the gamma prior do not change. Following this, to forecast consumption over a horizon of k days, we exploit a key property of Poisson processes: **counts scale linearly with exposure time**. If daily usage follows a Poisson process with rate lambda, then the total count over k days follows a Poisson distribution with mean lambda * k. However, the variability of lambda is already captured by the gamma prior. 
 
 This allows the posterior distribution to be extended to k days by NegBinom(x; a, b/(k + b)).  We use this posterior distribution to model consumption for k days.
 
-Since there is a closed-form expression for the posterior probability distribution, the Gamma distribution is called the *Conjugate Prior* of the Poisson Distribution.
+Since there is a closed-form expression for the posterior probability distribution, the Gamma distribution is called the **Conjugate Prior** of the Poisson Distribution.
 
 For the priors for a and b, we will derive empirical Bayes priors from the data, which are simply median(weekly consumption) for a and median(days per observation) for b.
 
-Due to the posterior having a closed-form expression, the posterior update reduces into *simple parameter update rules* - parameter a: a_prior + sum(consumption), parameter b: b_prior + sum(days)
+Due to the posterior having a closed-form expression, the posterior update reduces into **simple parameter update rules** - parameter a: a_prior + sum(consumption), parameter b: b_prior + sum(days)
 
 The Negative Binomial distribution exhibits properties such as right-tailed distribution, overdispersion in the random variable (variance is greater than the mean), and the variance and mean have a quadratic relationship.
 
@@ -94,7 +100,7 @@ head(import_data)
 The raw data originally contained only the Material Name, Weekly Stock Count, and Expiration Date (not shown). I have hidden expiration dates to respect data privacy.
 
 However, to make any forecast, the units used in week is required. 
-For this, I wrote an external Excel VBA script that calculates the weekly units used *y* for all materials using combinations of checks such as:
+For this, I wrote an **external Excel VBA script** that calculates the weekly units used **y** for all materials using combinations of checks such as:
 1. Was restock performed in given week?
 2. Is there expiry information available for the material in given week and previous week?
 3. Did any units expire in previous week?
@@ -231,13 +237,13 @@ The Prior for size parameter is chosen as the median of the weekly use, and the 
 
 We now define 4 functions:
 
-1. *fit_nb_model*: This function computes the posterior parameters for the Poisson–Gamma conjugate model, which leads to a Negative Binomial posterior predictive distribution.
+1. **fit_nb_model**: This function computes the posterior parameters for the Poisson–Gamma conjugate model, which leads to a Negative Binomial posterior predictive distribution.
 
 Given weekly usage counts (y) and exposure times (n) and empirical Bayes priors derived from the training window, the function returns: a = a0 + sum(y); b = b0 + sum(n)
 
 These parameters define the posterior distribution of the weekly usage rate and will be used to generate predictive samples.
 
-2. *predict_consumption_nb*: This function uses the posterior parameters from fit_nb_model to simulate posterior predictive outcomes for the total usage over the forecast horizon H_days.
+2. **predict_consumption_nb**: This function uses the posterior parameters from fit_nb_model to simulate posterior predictive outcomes for the total usage over the forecast horizon H_days.
 
 It draws Monte Carlo samples from:
 
@@ -246,7 +252,7 @@ Y_future ~ NegBinom(size = a, prob = b / (b + H_days))
 This distribution represents all plausible future usages consistent with past data.
 The function returns: the median predictive consumption and the raw list of predictive samples (for use in decision-making)
 
-3. *choose_restock_quantity*: This function transforms the predictive distribution into an operational decision.
+3. **choose_restock_quantity**: This function transforms the predictive distribution into an operational decision.
 
 For a grid of possible inventory stock levels Q, it computes the expected waste fraction:
 
@@ -258,7 +264,7 @@ From these, it selects the maximum feasible stock level, i.e., the largest Q tha
 
 This separates forecasting (uncertainty modeling) from decision-making (choosing stock under business constraints).
 
-4. *cross_validate_nb*: This function performs rolling cross-validation across the time series:
+4. **cross_validate_nb**: This function performs rolling cross-validation across the time series:
 
 At each time point, use a fixed training window.
 i. Fit the Bayesian model.
@@ -454,7 +460,8 @@ cross_validate_material1 <- cross_validate_material1_object$results_df %>% mutat
 
 head(cross_validate_material1)
 
-ggplot(data=cross_validate_material1, aes(x=forecast_date, y=residual)) +
+patchwork::wrap_plots(
+  ggplot(data=cross_validate_material1, aes(x=forecast_date, y=residual)) +
   geom_line() +
   geom_point() +
   geom_hline(aes(yintercept = 0), color="black") +
@@ -462,7 +469,7 @@ ggplot(data=cross_validate_material1, aes(x=forecast_date, y=residual)) +
   geom_hline(aes(yintercept = -20), color="red") +
   scale_x_date(date_breaks="8 weeks") +
   labs(title="Residual Plot for Material1") +
-  theme_minimal()
+  theme_minimal(),
 
 ggplot(data=cross_validate_material1, aes(x=var_mean_ratio, y=residual)) +
   geom_point() +
@@ -470,7 +477,11 @@ ggplot(data=cross_validate_material1, aes(x=var_mean_ratio, y=residual)) +
   geom_hline(aes(yintercept = 20), color="red") + 
   geom_hline(aes(yintercept = -20), color="red") +
   labs(title="Residual vs Var-Mean Ratio for Material1") +
-  theme_minimal()
+  theme_minimal(),
+
+  nrow=2,
+  ncol=1
+)
 
 ```
 
@@ -539,7 +550,8 @@ cross_validate_material2 <- cross_validate_material2_object$results_df %>% mutat
 
 head(cross_validate_material2)
 
-ggplot(data=cross_validate_material2, aes(x=forecast_date, y=residual)) +
+patchwork::wrap_plots(
+  ggplot(data=cross_validate_material2, aes(x=forecast_date, y=residual)) +
   geom_line() +
   geom_point() +
   geom_hline(aes(yintercept = 0), color="black") +
@@ -547,7 +559,7 @@ ggplot(data=cross_validate_material2, aes(x=forecast_date, y=residual)) +
   geom_hline(aes(yintercept = -7), color="red") +
   scale_x_date(date_breaks="8 weeks") +
   labs(title="Residual Plot for Material2") +
-  theme_minimal()
+  theme_minimal(),
 
 ggplot(data=cross_validate_material2, aes(x=var_mean_ratio, y=residual)) +
   geom_point() +
@@ -555,7 +567,11 @@ ggplot(data=cross_validate_material2, aes(x=var_mean_ratio, y=residual)) +
   geom_hline(aes(yintercept = 7), color="red") + 
   geom_hline(aes(yintercept = -7), color="red") +
   labs(title="Residual vs Var-Mean Ratio for Material2") +
-  theme_minimal()
+  theme_minimal(),
+  
+  nrow=2,
+  ncol=1
+)
 
 ```
 
@@ -604,4 +620,4 @@ Randomly sampled posteriors of high residual points show that the actual values 
 # Lessons Learned
 
 The Bayesian Analysis did not produce stable decision-grade forecasts under these constraints. The analysis shows that the inherent variability in usage is not  well captured by a single stochastic process defined by fixed priors and likelihood, even with an overdispersed posterior such as negative binomial.
-The critical insight I learned is that some processes are more suited to be managed primarily using human oversight rather than quantitative analysis. This approach also aligned with the preferred operational method of the team.
+The critical insight I learned is that **some processes are more suited to be managed primarily using human oversight** rather than quantitative analysis. This approach also aligned with the preferred operational method of the team.
