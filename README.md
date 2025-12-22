@@ -1,16 +1,9 @@
-# Bayesian Inventory Forecasting under Operational Constraints
+# Stochastic Consumption Forecasting
 
-This project explores Bayesian forecasting of small, high-variance reagent inventory data based on a QC environment. Weekly usage is modeled using Poisson–Gamma conjugacy, resulting in a Negative Binomial posterior predictive distribution scaled by forecast horizon.
+This project explores probabilistic demand forecasting for small, volatile inventory based on a QC environment. I modeled weekly consumption as an overdispersed count process and generated forecast distributions (not just point estimates) and selected forecast values based on a decision rule. The probabilistic model was stress-tested using rolling-origin evaluation.
 
-Project URL: https://thefifthpostulate.github.io/InventoryForecastingBayesian/InventoryProject.html
+**The key result**
+Consumption inherently had tight stock caps, high variance across windows, and short shelf-life. The overdispersed count model did not produce stable, decision-grade forecasts. The key insight learned was that this small inventory consumption was best managed primarily with expert oversight and benefited from real time usage metrics rather than longer term forecasts.
 
-The analysis includes:
-- Feature engineering from raw inventory records
-- Posterior predictive forecasting across rolling windows
-- Residual analysis and posterior diagnostics
-- Visualization of high-error cases to assess model failure modes
 
-**Key finding:**  
-Despite theoretically appropriate modeling, posterior uncertainty remains high due to small inventory sizes and context-dependent usage patterns. The analysis demonstrates that some operational processes are not well-suited for automated forecasting and are better managed through expert oversight.
-
-This project emphasizes model diagnostics, uncertainty interpretation, and decision relevance over point-estimate accuracy.
+Project URL: https://thefifthpostulate.github.io/Stochastic-Consumption-Forecasting/InventoryProject.html
